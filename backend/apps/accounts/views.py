@@ -5,6 +5,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
+from django.core.paginator import Paginator
 from .serializers import UserSerializer
 from .permissions import IsSuperAdmin
 from .models import AuditLog
@@ -37,6 +38,104 @@ class PermissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Permission
         fields = ['id', 'codename', 'name', 'app_label', 'model_name']
+
+
+@api_view(['GET'])
+@permission_classes([IsSuperAdmin])
+def users_list(request):
+    qs = User.objects.all().order_by('-date_joined')
+    search = request.query_params.get('search')
+    role = request.query_params.get('role')
+    if search:
+        qs = qs.filter(username__icontains=search) | qs.filter(email__icontains=search) | qs.filter(first_name__icontains=search) | qs.filter(last_name__icontains=search)
+    if role:
+        qs = qs.filter(role=role)
+    page_size = int(request.query_params.get('page_size', 10))
+    page = int(request.query_params.get('page', 1))
+    paginator = Paginator(qs, page_size)
+    page_obj = paginator.get_page(page)
+    return Response({
+        'count': paginator.count,
+        'results': UserSerializer(page_obj, many=True).data,
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsSuperAdmin])
+def user_create(request):
+    data = request.data.copy()
+    password = data.pop('password', None)
+    s = UserSerializer(data=data)
+    if s.is_valid():
+        user = s.save()
+        if password:
+            user.set_password(password)
+            user.save()
+        AuditLog.objects.create(
+            user=request.user, action='CREATE', model_name='User',
+            object_id=str(user.id), details={'username': user.username},
+            ip_address=getattr(request, '_audit_ip', None),
+        )
+        return Response(UserSerializer(user).data, status=201)
+    return Response(s.errors, status=400)
+
+
+@api_view(['GET', 'PATCH', 'DELETE'])
+@permission_classes([IsSuperAdmin])
+def user_detail(request, pk):
+    try:
+        user = User.objects.get(pk=pk)
+    except User.DoesNotExist:
+        return Response({'error': 'Utilisateur introuvable'}, status=404)
+
+    if request.method == 'GET':
+        data = UserSerializer(user).data
+        data['permissions'] = user.get_all_permissions_list()
+        data['groups'] = list(user.groups.values_list('name', flat=True))
+        return Response(data)
+
+    if request.method == 'PATCH':
+        s = UserSerializer(user, data=request.data, partial=True)
+        if s.is_valid():
+            s.save()
+            AuditLog.objects.create(
+                user=request.user, action='UPDATE', model_name='User',
+                object_id=str(pk), details={'fields': list(request.data.keys())},
+                ip_address=getattr(request, '_audit_ip', None),
+            )
+            return Response(UserSerializer(user).data)
+        return Response(s.errors, status=400)
+
+    if request.method == 'DELETE':
+        if user.is_superuser:
+            return Response({'error': 'Impossible de supprimer un superadmin'}, status=400)
+        AuditLog.objects.create(
+            user=request.user, action='DELETE', model_name='User',
+            object_id=str(pk), details={'username': user.username},
+            ip_address=getattr(request, '_audit_ip', None),
+        )
+        user.delete()
+        return Response(status=204)
+
+
+@api_view(['POST'])
+@permission_classes([IsSuperAdmin])
+def user_reset_password(request, pk):
+    try:
+        user = User.objects.get(pk=pk)
+    except User.DoesNotExist:
+        return Response({'error': 'Utilisateur introuvable'}, status=404)
+    new_password = request.data.get('new_password')
+    if not new_password or len(new_password) < 8:
+        return Response({'error': 'Le mot de passe doit contenir au moins 8 caractères'}, status=400)
+    user.set_password(new_password)
+    user.save()
+    AuditLog.objects.create(
+        user=request.user, action='UPDATE', model_name='User',
+        object_id=str(pk), details={'action': 'reset_password'},
+        ip_address=getattr(request, '_audit_ip', None),
+    )
+    return Response({'status': 'ok'})
 
 
 @api_view(['GET', 'PATCH'])

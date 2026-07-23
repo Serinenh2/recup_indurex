@@ -13,10 +13,11 @@ import InspectionsPage  from './pages/inspections/index'
 import StatsPage        from './pages/stats/index'
 import ArchivePage      from './pages/archive/index'
 import AdminRolesPage   from './pages/admin/roles/index'
+import AdminPermissionsPage from './pages/admin/permissions/index'
+import UsersPage         from './pages/users/index'
 import ProfilPage       from './pages/profil/ProfilPage'
 import DocumentsPage from './pages/documents/index'
 import TracabilitePage from './pages/tracabilite/index'
-import AIAssistantPage from './pages/ai/index'
 
 function PrivateRoute({ children }) {
   const user    = useAuthStore(s => s.user)
@@ -68,9 +69,10 @@ export default function App() {
         <Route path="archive"             element={<ArchivePage />} />
         <Route path="documents"           element={<DocumentsPage />} />
         <Route path="admin/roles"         element={<AdminRoute><AdminRolesPage /></AdminRoute>} />
+        <Route path="admin/permissions"   element={<AdminRoute><AdminPermissionsPage /></AdminRoute>} />
+        <Route path="users"               element={<AdminRoute><UsersPage /></AdminRoute>} />
         <Route path="profil"              element={<ProfilPage />} />
         <Route path="tracabilite"         element={<RequirePermission permission="traceability.view_traceability"><TracabilitePage /></RequirePermission>} />
-        <Route path="assistant-ia"       element={<AIAssistantPage />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
     </Routes>

@@ -4,10 +4,9 @@ import {
   LayoutDashboard, Package, FileText,
   BarChart3, LogOut, ChevronLeft, ChevronRight,
   Menu, Moon, Sun, Leaf, Shield, BookOpen, X, User,
-  Bell, GraduationCap, Building2, FolderOpen, Bot
+  Bell, GraduationCap, Building2, FolderOpen, Users, Key
 } from 'lucide-react'
 import { useAuthStore } from '../../store'
-import AIAssistantPage from '../../pages/ai/index'
 import clsx from 'clsx'
 
 const NAV_BASE = [
@@ -25,7 +24,9 @@ const NAV_BASE = [
 function getNav(user) {
   const nav = [...NAV_BASE]
   if (user?.role === 'SUPERADMIN' || user?.role === 'ADMIN' || user?.is_superuser) {
+    nav.push({ to: '/users', icon: Users, label: 'Gestion Utilisateurs', permission: null })
     nav.push({ to: '/admin/roles', icon: Shield, label: 'Gestion Rôles', permission: null })
+    nav.push({ to: '/admin/permissions', icon: Key, label: 'Gestion Permissions', permission: null })
   }
   return nav
 }
@@ -188,7 +189,6 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
-      <AIAssistantPage />
     </div>
   )
 }
