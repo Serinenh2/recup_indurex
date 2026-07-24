@@ -15,7 +15,7 @@ if (container) {
     <StrictMode>
       <BrowserRouter>
         <Sentry.ErrorBoundary
-          fallback={({ error }) => (
+          fallback={({ error, resetError }) => (
             <div className="min-h-screen flex items-center justify-center bg-red-50 p-8">
               <div className="max-w-md text-center space-y-4">
                 <div className="w-16 h-16 mx-auto rounded-full bg-red-100 flex items-center justify-center">
@@ -35,7 +35,7 @@ if (container) {
                 </button>
                 {import.meta.env.DEV && (
                   <pre className="mt-4 p-4 bg-red-100 rounded text-left text-xs overflow-auto max-h-40">
-                    {error?.message}
+                    {(error as Error)?.message}
                   </pre>
                 )}
               </div>

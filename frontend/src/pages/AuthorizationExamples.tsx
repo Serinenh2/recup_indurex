@@ -1,6 +1,9 @@
 import { Box, Typography, Paper, Button, Grid, Chip } from '@mui/material';
-import { useHasRole, useHasPermission, useIsAdmin, useIsSuperAdmin, useCanManageUsers, useCanManageRoles, useCanManagePermissions } from '../../hooks/usePermissions';
-import { AuthGuard, RoleGuard, PermissionGuard } from '../../components/guards';
+import PeopleIcon from '@mui/icons-material/People';
+import SecurityIcon from '@mui/icons-material/Security';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import { useIsAdmin, useIsSuperAdmin, useCanManageUsers, useCanManageRoles, useCanManagePermissions } from '../hooks/usePermissions';
+import { AuthGuard, RoleGuard, PermissionGuard } from '../components/guards';
 
 export default function AuthorizationExamples() {
   const isAdmin = useIsAdmin();
@@ -119,7 +122,7 @@ export default function AuthorizationExamples() {
                 </Button>
               )}
               {isSuperAdmin && (
-                <Button variant="outlined" color="secondary" startIcon={<AdminIcon />}>
+                <Button variant="outlined" color="secondary" startIcon={<AdminPanelSettingsIcon />}>
                   Paramètres avancés
                 </Button>
               )}

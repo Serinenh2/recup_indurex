@@ -11,6 +11,8 @@ export interface User {
   phone: string;
   wilaya: string;
   is_superuser: boolean;
+  is_active: boolean;
+  is_staff: boolean;
   recuperateur_id: number | null;
   recuperateur_nom: string | null;
   permissions: string[];

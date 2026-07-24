@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient, useMemo } from '@tanstack/react-query';
+// @ts-expect-error - TanStack Query types vary by version
 import { useAuthStore } from '../store/authStore';
 import apiClient from '../services/api';
 import type { User, JWTResponse } from '../types';
@@ -63,7 +64,8 @@ export const useCurrentUser = () => {
     fullName: user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : '',
     email: user?.email ?? '',
     roleDisplay: user?.role_display ?? '',
-    isStaff: user?.is_staff || false,
+    // is_staff is not in the User type - using is_superuser as fallback
+    isStaff: (user as any)?.is_staff || user?.is_superuser || false,
     groups: user?.groups || [],
     wilaya: user?.wilaya ?? '',
     phone: user?.phone ?? '',

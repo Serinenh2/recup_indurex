@@ -1,7 +1,10 @@
-import type { Role, Permission } from '../../types';
+import type { Role as GlobalRole, Permission as GlobalPermission } from '../../types';
 
-export interface RoleDetail extends Role {
-  permissions: Permission[];
+// Re-export global types used by this feature
+export type { GlobalRole as Role, GlobalPermission as Permission };
+
+export interface RoleDetail extends GlobalRole {
+  permissions: GlobalPermission[];
   users: Array<{
     id: number;
     username: string;

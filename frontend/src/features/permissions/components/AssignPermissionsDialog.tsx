@@ -74,7 +74,7 @@ export default function AssignPermissionsDialog({ open, onClose, selectedPermiss
     onClose();
   };
 
-  const groupedPermissions = permissions.reduce<Record<string, Record<string, Permission[]>>>>>((acc, perm) => {
+  const groupedPermissions = permissions.reduce<Record<string, Record<string, Permission[]>>>((acc, perm) => {
     if (!acc[perm.app_label]) acc[perm.app_label] = {};
     if (!acc[perm.app_label][perm.model_name]) acc[perm.app_label][perm.model_name] = [];
     acc[perm.app_label][perm.model_name].push(perm);

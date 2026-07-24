@@ -1,5 +1,6 @@
+import { Box, Typography, Paper } from '@mui/material';
 import { RoleGuard, PermissionGuard } from '../../../components/guards';
-import AdminDashboard from '../dashboard/components/AdminDashboard';
+import AdminDashboard from '../../../features/dashboard/components/AdminDashboard';
 
 export default function DashboardPage() {
   return (
