@@ -19,6 +19,7 @@ from apps.traceability.models import Traceability
 
 
 from .glossaire_data import rechercher_glossaire, formater_glossaire, detecter_langue
+from .nomenclature_data import rechercher_par_code, rechercher_par_texte, FAMILLES, CLASSE_LABELS, inferer_bsd_agrement
 
 
 def detecter_anomalies_bsd():
@@ -154,12 +155,16 @@ class AIConversationViewSet(viewsets.ModelViewSet):
             except Exception:
                 pass
 
+        # If message contains a nomenclature code pattern, skip glossary and go straight to nomenclature
+        import re as _re
+        if _re.search(r'\d{1,2}\.\d{1,2}\.\d{1,2}', message):
+            reponse_ctx = self._reponse_contextuelle(message, msg_lower, conversation, langue)
+            if reponse_ctx:
+                return reponse_ctx
+
         resultats_glossaire = rechercher_glossaire(message)
         if resultats_glossaire:
             reponse_glossaire = formater_glossaire(resultats_glossaire, langue)
-            reponse_ctx = self._reponse_contextuelle(message, msg_lower, conversation, langue)
-            if reponse_ctx:
-                return {'message': reponse_glossaire + '\n\n---\n\n' + reponse_ctx['message']}
             return {'message': reponse_glossaire}
 
         reponse_ctx = self._reponse_contextuelle(message, msg_lower, conversation, langue)
@@ -249,21 +254,34 @@ Comment puis-je vous aider aujourd'hui ?"""
         return None
 
     def _rechercher_nomenclature(self, message, langue='fr'):
-        from apps.nomenclature.models import Nomenclature
         import re
         msg_clean = message.strip().replace(':', '').replace('?', '').replace('!', '').strip()
 
-        # Detect code pattern and normalize
-        code_match = re.search(r'(\d{1,2}\.\d{1,2}\.\d{1,2})', msg_clean)
+        # Detect code pattern and search in frontend data (supports both formats: 1.3.1 and 01.03.01)
+        code_match = re.search(r'(\d{1,2})\.(\d{1,2})\.(\d{1,2})', msg_clean)
         if code_match:
-            raw = code_match.group(1)
-            parts = raw.split('.')
-            normalized = f"{int(parts[0]):02d}.{int(parts[1]):02d}.{int(parts[2]):02d}"
-            exact = Nomenclature.objects.filter(code=normalized).first()
-            if not exact:
-                exact = Nomenclature.objects.filter(code=raw).first()
-            if exact:
-                return self._nomenclature_detail(exact, langue)
+            # Build both padded and unpadded versions for flexible matching
+            parts = [int(x) for x in code_match.groups()]
+            formats = [
+                f'{parts[0]}.{parts[1]}.{parts[2]}',       # 1.3.1
+                f'{parts[0]:02d}.{parts[1]:02d}.{parts[2]:02d}',  # 01.03.01
+                f'{parts[0]}.{parts[1]:02d}.{parts[2]:02d}',      # 1.03.01
+                f'{parts[0]:02d}.{parts[1]}.{parts[2]}',          # 01.3.1
+            ]
+            results = []
+            seen = set()
+            for fmt in formats:
+                for item in rechercher_par_code(fmt):
+                    key = (item['code'], item['classe'], item['annexe'])
+                    if key not in seen:
+                        seen.add(key)
+                        results.append(item)
+
+            if results:
+                if len(results) == 1:
+                    return self._nomenclature_detail(results[0], langue)
+                # Multiple entries (e.g., 1.3.1 has both Annexe II and III)
+                return self._formater_resultats_nomenclature(results, langue)
 
         # Common typo corrections
         typo_map = {
@@ -276,91 +294,117 @@ Comment puis-je vous aider aujourd'hui ?"""
         for wrong, right in typo_map.items():
             corrected = corrected.replace(wrong, right)
 
-        results = Nomenclature.objects.filter(
-            Q(designation_fr__icontains=corrected) |
-            Q(designation_ar__icontains=corrected) |
-            Q(code__icontains=corrected) |
-            Q(famille__icontains=corrected)
-        )[:10]
+        results = rechercher_par_texte(corrected)[:10]
         if results:
-            if langue == 'ar':
-                reponse = "## نتائج البحث في التصنيف :\n\n"
-                for r in results:
-                    danger = " ⚠️ خطير" if r.dangerosite_ar else ""
-                    annexe = f" | الملحق: {r.annexe}" if r.annexe else ""
-                    reponse += f"- **{r.code}** — {r.designation_ar or r.designation_fr}{danger}\n"
-                    reponse += f"  الفئة : {r.classe} | العائلة : {r.famille}{annexe}\n"
-                    if r.bsd_obligatoire:
-                        reponse += f"  📋 بوليصة متابعة مطلوبة\n"
-                    if r.agrement_requis:
-                        reponse += f"  📝 اعتماد مطلوب\n"
-                    reponse += "\n"
-                reponse += "\n_المصدر: المرجع الوطني للنفايات، المرسوم التنفيذي رقم 06-104_"
-            else:
-                reponse = "## Résultats de recherche dans la nomenclature :\n\n"
-                for r in results:
-                    danger = " ⚠️ DANGEREUX" if r.dangerosite_fr else ""
-                    annexe = f" | Annexe {r.annexe}" if r.annexe else ""
-                    reponse += f"- **{r.code}** — {r.designation_fr}{danger}\n"
-                    reponse += f"  Catégorie : {r.classe} | Famille : {r.famille}{annexe}\n"
-                    if r.bsd_obligatoire:
-                        reponse += f"  📋 BSD obligatoire\n"
-                    if r.agrement_requis:
-                        reponse += f"  📝 Agrément requis\n"
-                    reponse += "\n"
-                reponse += "\n_Source : Référentiel national des déchets, Décret exécutif n°06-104_"
-            return {'message': reponse}
+            return self._formater_resultats_nomenclature(results, langue)
+
         if langue == 'ar':
             return {'message': "لم يتم العثور على نتائج في التصنيف. جرب بحثاً بكلمة أخرى (مثال: 'زيت', 'بطارية', 'معدن')."}
         return {'message': "Aucun résultat trouvé dans la nomenclature. Essayez avec un autre terme (ex: 'huile', 'batterie', 'métal')."}
 
-    def _nomenclature_detail(self, n, langue='fr'):
-        classe_labels = {
-            'MA': ('Ménagers et Assimilés', 'نفايات منزلية'),
-            'I': ('Inertes', 'نفايات خاملة'),
-            'S': ('Spéciaux', 'نفايات خاصة'),
-            'SD': ('Spéciaux Dangereux', 'نفايات خاصة خطرة'),
-        }
-        fr_label, ar_label = classe_labels.get(n.classe, (n.classe, n.classe))
+    def _formater_resultats_nomenclature(self, results, langue='fr'):
+        """Format multi-result search output (shared by code search and text search)."""
+        if langue == 'ar':
+            reponse = "## نتائج البحث في التصنيف :\n\n"
+            for item in results:
+                danger = " ⚠️ خطير" if item.get('danger_fr') else ""
+                annexe = f" | الملحق: {item['annexe']}" if item.get('annexe') else ""
+                nom = item['nom_fr']
+                reponse += f"- **{item['code']}** — {nom}{danger}\n"
+                famille_nom = FAMILLES.get(item['famille'], item['famille'])
+                reponse += f"  الفئة : {item['classe']} | العائلة : {item['famille']} — {famille_nom}{annexe}\n"
+                bsd_obligatoire, agrement_requis = inferer_bsd_agrement(item['classe'])
+                if bsd_obligatoire:
+                    reponse += f"  📋 بوليصة متابعة مطلوبة\n"
+                if agrement_requis:
+                    reponse += f"  📝 اعتماد مطلوب\n"
+                reponse += "\n"
+            reponse += "\n_المصدر: المرجع الوطني للنفايات، المرسوم التنفيذي رقم 06-104_"
+        else:
+            reponse = "## Résultats de recherche dans la nomenclature :\n\n"
+            for item in results:
+                danger = " ⚠️ DANGEREUX" if item.get('danger_fr') else ""
+                annexe = f" | Annexe {item['annexe']}" if item.get('annexe') else ""
+                nom = item['nom_fr']
+                reponse += f"- **{item['code']}** — {nom}{danger}\n"
+                famille_nom = FAMILLES.get(item['famille'], item['famille'])
+                reponse += f"  Catégorie : {item['classe']} | Famille : {item['famille']} — {famille_nom}{annexe}\n"
+                bsd_obligatoire, agrement_requis = inferer_bsd_agrement(item['classe'])
+                if bsd_obligatoire:
+                    reponse += f"  📋 BSD obligatoire\n"
+                if agrement_requis:
+                    reponse += f"  📝 Agrément requis\n"
+                reponse += "\n"
+            reponse += "\n_Source : Référentiel national des déchets, Décret exécutif n°06-104_"
+        return {'message': reponse}
 
+    def _nomenclature_detail(self, item, langue='fr'):
+        """
+        Affiche le détail d'un item de nomenclature (dict issu de nomenclature_data.py).
+        Compatible avec les données de la page Nomenclature frontend.
+        """
+        fr_label, ar_label = CLASSE_LABELS.get(item['classe'], (item['classe'], item['classe']))
+
+        # Parse dangers from danger_fr string (newline-separated)
+        danger_fr = item.get('danger_fr', '') or ''
         dangers = []
-        if n.explosible: dangers.append(('Explosible', 'متفجر'))
-        if n.inflammable: dangers.append(('Inflammable', 'قابل للاشتعال'))
-        if n.toxique: dangers.append(('Toxique', 'سام'))
-        if n.cancerogene: dangers.append(('Cancérogène', 'مسرطن'))
-        if n.corrosive: dangers.append(('Corrosif', 'آكل'))
-        if n.infectieuse: dangers.append(('Infectieux', 'ممرض'))
-        if n.dangereuse_environnement: dangers.append(('Dangereux environnement', 'خطير للبيئة'))
+        danger_translation = {
+            'Explosible': ('Explosible', 'متفجر'),
+            'Explosive': ('Explosive', 'متفجر'),
+            'Inflammable': ('Inflammable', 'قابل للاشتعال'),
+            'Facilement inflammable': ('Facilement inflammable', 'قابل للاشتعال بسهولة'),
+            'Comburante': ('Comburante', 'مؤكسد'),
+            'Toxique': ('Toxique', 'سام'),
+            'Toxique vis-à-vis de la reproduction': ('Toxique pour la reproduction', 'سام للتكاثر'),
+            'Cancérogène': ('Cancérogène', 'مسرطن'),
+            'Mutagène': ('Mutagène', 'مطفر'),
+            'Corrosive': ('Corrosive', 'آكل'),
+            'Corrosif': ('Corrosif', 'آكل'),
+            'Irritante': ('Irritante', 'مهيج'),
+            'Nocive': ('Nocive', 'ضار'),
+            'Infectieuse': ('Infectieuse', 'ممرض'),
+            'Dangereuse pour l\'environnement': ('Dangereux environnement', 'خطير للبيئة'),
+        }
+        if danger_fr:
+            for d in danger_fr.split('\n'):
+                d = d.strip()
+                if d and d in danger_translation:
+                    dangers.append(danger_translation[d])
+                elif d:
+                    dangers.append((d, d))
+
+        bsd_obligatoire, agrement_requis = inferer_bsd_agrement(item['classe'])
+        famille_nom = FAMILLES.get(item['famille'], item['famille'])
 
         if langue == 'ar':
-            reponse = f"## التصنيف — `{n.code}`\n\n"
-            reponse += f"### {n.designation_ar or n.designation_fr}\n\n"
-            reponse += f"**الرمز** : `{n.code}`\n"
-            reponse += f"**التصنيف** : {n.classe} — {ar_label}\n"
-            reponse += f"**العائلة** : {n.famille} — {n.sous_famille}\n"
-            if n.annexe:
-                reponse += f"**الملحق** : {n.annexe}\n"
+            reponse = f"## التصنيف — `{item['code']}`\n\n"
+            reponse += f"### {item['nom_fr']}\n\n"
+            reponse += f"**الرمز** : `{item['code']}`\n"
+            reponse += f"**التصنيف** : {item['classe']} — {ar_label}\n"
+            reponse += f"**العائلة** : {item['famille']} — {famille_nom}\n"
+            if item.get('annexe'):
+                reponse += f"**الملحق** : {item['annexe']}\n"
             if dangers:
                 reponse += f"**أنواع الخطورة** : {', '.join(ar for _, ar in dangers)}\n"
             reponse += "\n"
-            reponse += f"**📋 بوليصة متابعة** : {'مطلوب' if n.bsd_obligatoire else 'غير مطلوب'}\n"
-            reponse += f"**📝 اعتماد** : {'مطلوب' if n.agrement_requis else 'غير مطلوب'}\n"
+            reponse += f"**📋 بوليصة متابعة** : {'مطلوب' if bsd_obligatoire else 'غير مطلوب'}\n"
+            reponse += f"**📝 اعتماد** : {'مطلوب' if agrement_requis else 'غير مطلوب'}\n"
             reponse += "\n_المصدر: المرجع الوطني للنفايات، المرسوم التنفيذي رقم 06-104_"
         else:
-            reponse = f"## Nomenclature — `{n.code}`\n\n"
-            reponse += f"### {n.designation_fr}\n\n"
-            reponse += f"**Code** : `{n.code}`\n"
-            reponse += f"**Classe** : {n.classe} — {fr_label}\n"
-            reponse += f"**Famille** : {n.famille} — {n.sous_famille}\n"
-            if n.annexe:
-                reponse += f"**Annexe** : {n.annexe}\n"
-            if n.dangerosite_fr:
-                reponse += f"**Dangerosité** : {n.dangerosite_fr}\n"
+            reponse = f"## Nomenclature — `{item['code']}`\n\n"
+            reponse += f"### {item['nom_fr']}\n\n"
+            reponse += f"**Code** : `{item['code']}`\n"
+            reponse += f"**Classe** : {item['classe']} — {fr_label}\n"
+            reponse += f"**Famille** : {item['famille']} — {famille_nom}\n"
+            if item.get('annexe'):
+                reponse += f"**Annexe** : {item['annexe']}\n"
+            if danger_fr:
+                reponse += f"**Dangerosité** : {danger_fr.replace(chr(10), ', ')}\n"
             if dangers:
                 reponse += f"**Types de danger** : {', '.join(fr for fr, _ in dangers)}\n"
             reponse += "\n"
-            reponse += f"**📋 BSD obligatoire** : {'Oui' if n.bsd_obligatoire else 'Non'}\n"
-            reponse += f"**📝 Agrément requis** : {'Oui' if n.agrement_requis else 'Non'}\n"
+            reponse += f"**📋 BSD obligatoire** : {'Oui' if bsd_obligatoire else 'Non'}\n"
+            reponse += f"**📝 Agrément requis** : {'Oui' if agrement_requis else 'Non'}\n"
             reponse += "\n_Source : Référentiel national des déchets, Décret exécutif n°06-104_"
         return {'message': reponse}
 

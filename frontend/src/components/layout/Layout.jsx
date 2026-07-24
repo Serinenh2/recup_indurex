@@ -7,6 +7,7 @@ import {
 import { useAuthStore } from '../../store'
 import { useNavigation } from '../../hooks/useNavigation'
 import clsx from 'clsx'
+import ChatWidget from '../ChatWidget'
 
 const ROLE_HIERARCHY = {
   SUPERADMIN: 100, ADMIN: 80,
@@ -206,6 +207,7 @@ export default function Layout() {
         <main className="flex-1 p-4 sm:p-6 max-w-[1600px] w-full mx-auto">
           <Outlet />
         </main>
+        <ChatWidget />
       </div>
     </div>
   )
