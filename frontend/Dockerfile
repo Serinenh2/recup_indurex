@@ -1,13 +1,16 @@
 # ── Build stage ──────────────────────────────────────────
 FROM node:20-alpine AS builder
 
+ARG VITE_SENTRY_DSN
+ENV VITE_SENTRY_DSN=$VITE_SENTRY_DSN
+
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
-RUN npm ci --only=production && npm cache clean --force
+RUN npm install && npm cache clean --force
 
 COPY . .
-RUN npm run build
+RUN npx vite build
 
 # ── Nginx stage ─────────────────────────────────────────
 FROM nginx:1.25-alpine AS runtime

@@ -5,6 +5,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# ── Sentry (early init — must be before any import that might fail) ──
+from apps.accounts.sentry import init_sentry
+init_sentry()
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ═══════════════════════════════════════════════════════════════
@@ -58,6 +62,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'apps.accounts.middleware.AuditLogMiddleware',
     'apps.accounts.middleware.SecurityHeadersMiddleware',
+    'apps.accounts.middleware.SentryUserContextMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'

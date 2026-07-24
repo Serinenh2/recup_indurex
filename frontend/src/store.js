@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import api from './api'
+import { setSentryUser } from './sentry'
 
 export const useAuthStore = create((set, get) => ({
   user: null,
@@ -11,12 +12,14 @@ export const useAuthStore = create((set, get) => ({
     localStorage.setItem('refresh_token', data.refresh)
     const me = await api.get('/accounts/me/')
     set({ user: me.data, loading: false })
+    setSentryUser(me.data)
     return me.data
   },
 
   logout: () => {
     localStorage.clear()
     set({ user: null })
+    setSentryUser(null)
   },
 
   loadUser: async () => {
@@ -25,6 +28,7 @@ export const useAuthStore = create((set, get) => ({
     try {
       const { data } = await api.get('/accounts/me/')
       set({ user: data, loading: false })
+      setSentryUser(data)
     } catch { set({ loading: false }) }
   },
 

@@ -30,14 +30,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN groupadd -r django && useradd -r -g django -d /app -s /bin/false django
 
 # Copy installed packages from builder
-COPY --from=builder /root/.local /root/.local
-ENV PATH=/root/.local/bin:$PATH
+COPY --from=builder /root/.local /home/django/.local
+ENV PATH=/home/django/.local/bin:$PATH
+ENV PYTHONPATH=/home/django/.local/lib/python3.11/site-packages
 
 # Copy application code
 COPY . .
 
 # Create required directories with correct permissions
 RUN mkdir -p /app/logs /app/media /app/staticfiles && \
+    touch /app/logs/django.log && \
+    chmod -R 777 /app/logs && \
     chown -R django:django /app
 
 # Collect static files

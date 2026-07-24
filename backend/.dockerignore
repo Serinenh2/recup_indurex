@@ -1,0 +1,12 @@
+venv/
+__pycache__/
+*.pyc
+.env
+db.sqlite3
+media/
+logs/
+.DS_Store
+.git/
+*.md
+out.txt
+*.dump.txt

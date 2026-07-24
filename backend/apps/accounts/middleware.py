@@ -1,3 +1,4 @@
+import sentry_sdk
 from django.utils.deprecation import MiddlewareMixin
 
 
@@ -20,7 +21,6 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
     """
 
     def process_response(self, request, response):
-        # Content Security Policy
         if not response.get('Content-Security-Policy'):
             response['Content-Security-Policy'] = (
                 "default-src 'self'; "
@@ -34,7 +34,6 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
                 "form-action 'self'"
             )
 
-        # Permissions Policy (disable unused browser features)
         if not response.get('Permissions-Policy'):
             response['Permissions-Policy'] = (
                 'camera=(), microphone=(), geolocation=(), '
@@ -42,7 +41,6 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
                 'magnetometer=(), gyroscope=(), autoplay=()'
             )
 
-        # Cross-Origin policies
         if not response.get('Cross-Origin-Resource-Policy'):
             response['Cross-Origin-Resource-Policy'] = 'same-origin'
 
@@ -50,3 +48,17 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
             response['Cross-Origin-Opener-Policy'] = 'same-origin'
 
         return response
+
+
+class SentryUserContextMiddleware(MiddlewareMixin):
+    """Attache l'utilisateur Django au contexte Sentry pour chaque requête."""
+
+    def process_view(self, request, view_func, view_args, view_kwargs):
+        if request.user.is_authenticated:
+            with sentry_sdk.configure_scope() as scope:
+                scope.set_user({
+                    'id': str(request.user.id),
+                    'email': request.user.email or '',
+                    'username': request.user.username or '',
+                })
+        return None
