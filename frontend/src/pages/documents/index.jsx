@@ -11,6 +11,7 @@ import { NOMENCLATURE } from '../nomenclature/nomenclatureData'
 import DateInput from '../../components/common/DateInput'
 import { formatDateFR } from '../../utils/formatDate'
 import toast from 'react-hot-toast'
+import { Can, useCan } from '../../components/guards'
 
 const bsdAPI = {
   getAll:  (p)    => api.get('/bsd/', { params: p }),
@@ -581,9 +582,11 @@ function BLForm({ bl, currentUser, dossiers = [], onSave, onClose }) {
       </F>
 
       <div className="flex gap-3 pt-2 border-t border-[#E2E8F0]">
-        <button type="submit" disabled={saving||generating} className="btn-primary">
-          <Save size={15}/> {saving?'Enregistrement...':isEdit?'Mettre à jour':'Créer le BL'}
-        </button>
+        <Can do={isEdit ? 'bl.change_bonlivraison' : 'bl.add_bonlivraison'}>
+          <button type="submit" disabled={saving||generating} className="btn-primary">
+            <Save size={15}/> {saving?'Enregistrement...':isEdit?'Mettre à jour':'Créer le BL'}
+          </button>
+        </Can>
         <button type="button" onClick={downloadPdf} disabled={saving||generating} className="btn-secondary flex items-center gap-2">
           {generating
             ? <><span className="w-4 h-4 border-2 border-slate-400/30 border-t-slate-500 rounded-full animate-spin"/>Génération...</>
@@ -644,21 +647,27 @@ function BLCard({ doc, onEdit, onDelete, onPdf, onWord, onGenererFacture }) {
           <LinkedDocsRow origin={doc.bon_commande_origine_numero} generated={doc.factures_generees_numeros}/>
         </div>
         <div className="flex gap-1 flex-shrink-0">
-          <button onClick={()=>onGenererFacture(doc)} className="btn-ghost p-1.5 text-slate-400 hover:text-emerald-600" title="Générer la Facture">
-            <Receipt size={13}/>
-          </button>
+          <Can do="bl.add_bonlivraison">
+            <button onClick={()=>onGenererFacture(doc)} className="btn-ghost p-1.5 text-slate-400 hover:text-emerald-600" title="Générer la Facture">
+              <Receipt size={13}/>
+            </button>
+          </Can>
           <button onClick={()=>onPdf(doc)} className="btn-ghost p-1.5 text-slate-400 hover:text-primary-600" title="PDF">
             <Download size={13}/>
           </button>
           <button onClick={()=>onWord(doc)} className="btn-ghost p-1.5 text-slate-400 hover:text-primary-600" title="Word">
             <FileText size={13}/>
           </button>
-          <button onClick={()=>onEdit(doc)} className="btn-ghost p-1.5 text-slate-400 hover:text-primary-600">
-            <Edit size={13}/>
-          </button>
-          <button onClick={()=>onDelete(doc.id,'bl')} className="btn-ghost p-1.5 text-slate-400 hover:text-red-500">
-            <Trash2 size={13}/>
-          </button>
+          <Can do="bl.change_bonlivraison">
+            <button onClick={()=>onEdit(doc)} className="btn-ghost p-1.5 text-slate-400 hover:text-primary-600">
+              <Edit size={13}/>
+            </button>
+          </Can>
+          <Can do="bl.delete_bonlivraison">
+            <button onClick={()=>onDelete(doc.id,'bl')} className="btn-ghost p-1.5 text-slate-400 hover:text-red-500">
+              <Trash2 size={13}/>
+            </button>
+          </Can>
         </div>
       </div>
     </div>
@@ -1018,9 +1027,11 @@ function BCForm({ bc, currentUser, dossiers = [], onSave, onClose, typeDocument 
       </F>
 
       <div className="flex gap-3 pt-2 border-t border-[#E2E8F0]">
-        <button type="submit" disabled={saving||generating} className="btn-primary">
-          <Save size={15}/> {saving?'Enregistrement...':isEdit?'Mettre à jour':`Créer ${isFacture?'la':'le'} ${docLabel}`}
-        </button>
+        <Can do={isEdit ? 'bc.change_boncommande' : 'bc.add_boncommande'}>
+          <button type="submit" disabled={saving||generating} className="btn-primary">
+            <Save size={15}/> {saving?'Enregistrement...':isEdit?'Mettre à jour':`Créer ${isFacture?'la':'le'} ${docLabel}`}
+          </button>
+        </Can>
         <button type="button" onClick={downloadPdf} disabled={saving||generating} className="btn-secondary flex items-center gap-2">
           {generating
             ? <><span className="w-4 h-4 border-2 border-slate-400/30 border-t-slate-500 rounded-full animate-spin"/>Génération...</>
@@ -1064,15 +1075,23 @@ function BCCard({ doc, onEdit, onDelete, onPdf, onWord, onGenererBC, onGenererBL
         </div>
         <div className="flex gap-1 flex-shrink-0">
           {doc.type_document === 'PROFORMA' && (
-            <button onClick={()=>onGenererBC(doc)} className="btn-ghost p-1.5 text-slate-400 hover:text-emerald-600" title="Générer le BC"><ShoppingCart size={13}/></button>
+            <Can do="bc.add_boncommande">
+              <button onClick={()=>onGenererBC(doc)} className="btn-ghost p-1.5 text-slate-400 hover:text-emerald-600" title="Générer le BC"><ShoppingCart size={13}/></button>
+            </Can>
           )}
           {doc.type_document === 'BC' && (
-            <button onClick={()=>onGenererBL(doc)} className="btn-ghost p-1.5 text-slate-400 hover:text-primary-600" title="Générer le BL"><Truck size={13}/></button>
+            <Can do="bc.add_boncommande">
+              <button onClick={()=>onGenererBL(doc)} className="btn-ghost p-1.5 text-slate-400 hover:text-primary-600" title="Générer le BL"><Truck size={13}/></button>
+            </Can>
           )}
           <button onClick={()=>onPdf(doc)} className="btn-ghost p-1.5 text-slate-400 hover:text-emerald-600" title="PDF"><Download size={13}/></button>
           <button onClick={()=>onWord(doc)} className="btn-ghost p-1.5 text-slate-400 hover:text-emerald-600" title="Word"><FileText size={13}/></button>
-          <button onClick={()=>onEdit(doc)} className="btn-ghost p-1.5 text-slate-400 hover:text-emerald-600"><Edit size={13}/></button>
-          <button onClick={()=>onDelete(doc.id,'bc')} className="btn-ghost p-1.5 text-slate-400 hover:text-red-500"><Trash2 size={13}/></button>
+          <Can do="bc.change_boncommande">
+            <button onClick={()=>onEdit(doc)} className="btn-ghost p-1.5 text-slate-400 hover:text-emerald-600"><Edit size={13}/></button>
+          </Can>
+          <Can do="bc.delete_boncommande">
+            <button onClick={()=>onDelete(doc.id,'bc')} className="btn-ghost p-1.5 text-slate-400 hover:text-red-500"><Trash2 size={13}/></button>
+          </Can>
         </div>
       </div>
     </div>
@@ -1334,9 +1353,11 @@ function BSDForm({ bsd, recuperateurs, dossiers, currentUser, onSave, onClose })
       </F>
 
       <div className="flex gap-3 pt-2 border-t border-[#E2E8F0]">
-        <button type="submit" disabled={saving||generating} className="btn-primary">
-          <Save size={15}/> {saving?'Enregistrement...':isEdit?'Mettre à jour':'Créer le BSD'}
-        </button>
+        <Can do={isEdit ? 'bsd.change_bordereausuividechet' : 'bsd.add_bordereausuividechet'}>
+          <button type="submit" disabled={saving||generating} className="btn-primary">
+            <Save size={15}/> {saving?'Enregistrement...':isEdit?'Mettre à jour':'Créer le BSD'}
+          </button>
+        </Can>
         <button type="button" onClick={downloadPdf} disabled={saving||generating} className="btn-secondary flex items-center gap-2">
           {generating
             ? <><span className="w-4 h-4 border-2 border-slate-400/30 border-t-slate-500 rounded-full animate-spin"/>Génération...</>
@@ -1602,9 +1623,11 @@ function DSDForm({ dsd, recuperateurs, dossiers, currentUser, onSave, onClose })
       ))}
 
       <div className="flex gap-3 pt-3 border-t border-[#E2E8F0] sticky bottom-0 bg-white dark:bg-[#16240D] py-3">
-        <button type="submit" disabled={saving} className="btn-primary">
-          <Save size={15}/> {saving?'Enregistrement...':isEdit?'Mettre à jour':'Enregistrer la DSD'}
-        </button>
+        <Can do={isEdit ? 'declarations.change_declaration' : 'declarations.add_declaration'}>
+          <button type="submit" disabled={saving} className="btn-primary">
+            <Save size={15}/> {saving?'Enregistrement...':isEdit?'Mettre à jour':'Enregistrer la DSD'}
+          </button>
+        </Can>
         <button type="button" onClick={downloadPdf} disabled={generating} className="btn-secondary">
           <Download size={15}/> {generating?'Génération...':'Télécharger PDF'}
         </button>
@@ -1833,9 +1856,11 @@ function PVForm({ pv, recuperateurs, dossiers, eliminateurs, currentUser, onSave
       </div>
 
       <div className="flex gap-3 pt-2 border-t border-[#E2E8F0]">
-        <button type="submit" disabled={saving||generating} className="btn-primary">
-          <Save size={15}/> {saving?'...':isEdit?'Mettre à jour':'Créer le PV'}
-        </button>
+        <Can do={isEdit ? 'inspections.change_inspection' : 'inspections.add_inspection'}>
+          <button type="submit" disabled={saving||generating} className="btn-primary">
+            <Save size={15}/> {saving?'...':isEdit?'Mettre à jour':'Créer le PV'}
+          </button>
+        </Can>
         <button type="button" onClick={downloadPdf} disabled={saving||generating} className="btn-secondary flex items-center gap-2">
           {generating
             ? <><span className="w-4 h-4 border-2 border-slate-400/30 border-t-slate-500 rounded-full animate-spin"/>Génération...</>
@@ -1889,12 +1914,16 @@ function BSDCard({ doc, onEdit, onDelete, onPdf, onWord }) {
           <button onClick={()=>onWord(doc)} className="btn-ghost p-1.5 text-slate-400 hover:text-primary-600" title="Word">
             <FileText size={13}/>
           </button>
-          <button onClick={()=>onEdit(doc)} className="btn-ghost p-1.5 text-slate-400 hover:text-primary-600">
-            <Edit size={13}/>
-          </button>
-          <button onClick={()=>onDelete(doc.id,'bsd')} className="btn-ghost p-1.5 text-slate-400 hover:text-red-600">
-            <Trash2 size={13}/>
-          </button>
+          <Can do="bsd.change_bordereausuividechet">
+            <button onClick={()=>onEdit(doc)} className="btn-ghost p-1.5 text-slate-400 hover:text-primary-600">
+              <Edit size={13}/>
+            </button>
+          </Can>
+          <Can do="bsd.delete_bordereausuividechet">
+            <button onClick={()=>onDelete(doc.id,'bsd')} className="btn-ghost p-1.5 text-slate-400 hover:text-red-600">
+              <Trash2 size={13}/>
+            </button>
+          </Can>
         </div>
       </div>
     </div>
@@ -1931,12 +1960,16 @@ function DSDCard({ doc, onEdit, onDelete, onPdf, onWord }) {
           <button onClick={()=>onWord(doc)} className="btn-ghost p-1.5 text-slate-400 hover:text-primary-600" title="Word">
             <FileText size={13}/>
           </button>
-          <button onClick={()=>onEdit(doc)} className="btn-ghost p-1.5 text-slate-400 hover:text-primary-600">
-            <Edit size={13}/>
-          </button>
-          <button onClick={()=>onDelete(doc.id,'dsd')} className="btn-ghost p-1.5 text-slate-400 hover:text-red-600">
-            <Trash2 size={13}/>
-          </button>
+          <Can do="declarations.change_declaration">
+            <button onClick={()=>onEdit(doc)} className="btn-ghost p-1.5 text-slate-400 hover:text-primary-600">
+              <Edit size={13}/>
+            </button>
+          </Can>
+          <Can do="declarations.delete_declaration">
+            <button onClick={()=>onDelete(doc.id,'dsd')} className="btn-ghost p-1.5 text-slate-400 hover:text-red-600">
+              <Trash2 size={13}/>
+            </button>
+          </Can>
         </div>
       </div>
     </div>
@@ -1975,8 +2008,12 @@ function PVCard({ doc, onEdit, onDelete, onPdf, onWord }) {
           <button onClick={()=>onWord(doc)} className="btn-ghost p-1.5 text-slate-400 hover:text-primary-600" title="Word">
             <FileText size={13}/>
           </button>
-          <button onClick={()=>onEdit(doc)} className="btn-ghost p-1.5 text-slate-400 hover:text-primary-600"><Edit size={13}/></button>
-          <button onClick={()=>onDelete(doc.id,'pv')} className="btn-ghost p-1.5 text-slate-400 hover:text-red-600"><Trash2 size={13}/></button>
+          <Can do="inspections.change_inspection">
+            <button onClick={()=>onEdit(doc)} className="btn-ghost p-1.5 text-slate-400 hover:text-primary-600"><Edit size={13}/></button>
+          </Can>
+          <Can do="inspections.delete_inspection">
+            <button onClick={()=>onDelete(doc.id,'pv')} className="btn-ghost p-1.5 text-slate-400 hover:text-red-600"><Trash2 size={13}/></button>
+          </Can>
         </div>
       </div>
     </div>
@@ -2209,9 +2246,11 @@ export default function DocumentsPage() {
           </h1>
           <p className="text-slate-500 text-sm mt-0.5">BSD — DSD — Procès-Verbaux — Rapports</p>
         </div>
-        <button onClick={()=>{setEditing(null);setShowForm(true)}} className="btn-primary">
-          <Plus size={16}/> {getBtnLabel()}
-        </button>
+        <Can do={tab==='bsd' ? 'bsd.add_bordereausuividechet' : tab==='bl' ? 'bl.add_bonlivraison' : tab==='bc' || tab==='proforma' || tab==='facture' ? 'bc.add_boncommande' : tab==='dsd' ? 'declarations.add_declaration' : tab==='pv' ? 'inspections.add_inspection' : null}>
+          <button onClick={()=>{setEditing(null);setShowForm(true)}} className="btn-primary">
+            <Plus size={16}/> {getBtnLabel()}
+          </button>
+        </Can>
       </div>
 
       {/* Tabs */}
@@ -2253,9 +2292,11 @@ export default function DocumentsPage() {
         <div className="card p-14 text-center">
           <TabIcon size={36} className="mx-auto mb-3 text-slate-200"/>
           <p className="font-semibold text-slate-400">Aucun {currentTab?.label} trouvé</p>
-          <button onClick={()=>{setEditing(null);setShowForm(true)}} className="btn-primary mt-4">
-            <Plus size={15}/> {getBtnLabel()}
-          </button>
+          <Can do={tab==='bsd' ? 'bsd.add_bordereausuividechet' : tab==='bl' ? 'bl.add_bonlivraison' : tab==='bc' || tab==='proforma' || tab==='facture' ? 'bc.add_boncommande' : tab==='dsd' ? 'declarations.add_declaration' : tab==='pv' ? 'inspections.add_inspection' : null}>
+            <button onClick={()=>{setEditing(null);setShowForm(true)}} className="btn-primary mt-4">
+              <Plus size={15}/> {getBtnLabel()}
+            </button>
+          </Can>
         </div>
       ) : (
         <div className="space-y-2">

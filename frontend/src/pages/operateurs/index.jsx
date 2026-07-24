@@ -13,6 +13,7 @@ import { NOMENCLATURE } from '../nomenclature/nomenclatureData'
 import DateInput from '../../components/common/DateInput'
 import { formatDateFR } from '../../utils/formatDate'
 import toast from 'react-hot-toast'
+import { Can, useCan } from '../../components/guards'
 
 // ── API ───────────────────────────────────────────────────────────────────────
 const opAPI = {
@@ -369,9 +370,11 @@ function OperateurForm({ operateur, onSave, onClose }) {
       </div>
 
       <div className="flex gap-3 pt-2 border-t border-[#E2E8F0]">
-        <button type="submit" disabled={saving} className="btn-primary">
-          <Save size={15} /> {saving ? 'Enregistrement...' : isEdit ? 'Mettre à jour' : 'Créer l\'opérateur'}
-        </button>
+        <Can do={isEdit ? 'operateurs.change_operateur' : 'operateurs.add_operateur'}>
+          <button type="submit" disabled={saving} className="btn-primary">
+            <Save size={15} /> {saving ? 'Enregistrement...' : isEdit ? 'Mettre à jour' : 'Créer l\'opérateur'}
+          </button>
+        </Can>
         <button type="button" onClick={onClose} className="btn-secondary">Annuler</button>
       </div>
     </form>
@@ -382,6 +385,7 @@ function OperateurForm({ operateur, onSave, onClose }) {
 function OperateurCard({ op, onEdit, onDelete, onView }) {
   const cfg  = TYPE_CFG[op.type_operateur] || TYPE_CFG.GENERATEUR
   const Icon = cfg.icon
+  const { can } = useCan()
 
   return (
     <div className="card p-4 hover:shadow-lg transition-all cursor-pointer" onClick={() => onView(op)}>
@@ -435,8 +439,12 @@ function OperateurCard({ op, onEdit, onDelete, onView }) {
         </div>
         <div className="flex gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
           <button onClick={() => onView(op)} className="btn-ghost p-2 text-slate-400 hover:text-primary-600"><Eye size={14} /></button>
-          <button onClick={() => onEdit(op)} className="btn-ghost p-2 text-slate-400 hover:text-primary-600"><Edit size={14} /></button>
-          <button onClick={() => onDelete(op.id)} className="btn-ghost p-2 text-slate-400 hover:text-red-600"><Trash2 size={14} /></button>
+          <Can do="operateurs.change_operateur">
+            <button onClick={() => onEdit(op)} className="btn-ghost p-2 text-slate-400 hover:text-primary-600"><Edit size={14} /></button>
+          </Can>
+          <Can do="operateurs.delete_operateur">
+            <button onClick={() => onDelete(op.id)} className="btn-ghost p-2 text-slate-400 hover:text-red-600"><Trash2 size={14} /></button>
+          </Can>
         </div>
       </div>
     </div>
@@ -473,7 +481,9 @@ function DetailPanel({ op, onClose, onEdit }) {
             </div>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => onEdit(op)} className="btn-secondary btn-sm"><Edit size={13} /></button>
+            <Can do="operateurs.change_operateur">
+              <button onClick={() => onEdit(op)} className="btn-secondary btn-sm"><Edit size={13} /></button>
+            </Can>
             <button onClick={onClose} className="btn-ghost p-2"><X size={16} /></button>
           </div>
         </div>
@@ -641,9 +651,11 @@ export default function OperateursPage() {
             Acteurs et institutions liés aux récupérateurs de déchets — {operateurs.length} enregistré(s)
           </p>
         </div>
-        <button onClick={() => { setEditing(null); setShowForm(true) }} className="btn-primary">
-          <Plus size={16} /> Nouvel opérateur
-        </button>
+        <Can do="operateurs.add_operateur">
+          <button onClick={() => { setEditing(null); setShowForm(true) }} className="btn-primary">
+            <Plus size={16} /> Nouvel opérateur
+          </button>
+        </Can>
       </div>
 
       {/* Type chips */}
@@ -692,9 +704,11 @@ export default function OperateursPage() {
           <Users size={40} className="mx-auto mb-3 text-slate-200" />
           <p className="font-semibold text-slate-400">Aucun opérateur enregistré</p>
           <p className="text-sm text-slate-300 mt-1">Les opérateurs sont enregistrés une seule fois et réutilisés dans toutes les opérations.</p>
-          <button onClick={() => { setEditing(null); setShowForm(true) }} className="btn-primary mt-4">
-            <Plus size={15} /> Ajouter le premier opérateur
-          </button>
+          <Can do="operateurs.add_operateur">
+            <button onClick={() => { setEditing(null); setShowForm(true) }} className="btn-primary mt-4">
+              <Plus size={15} /> Ajouter le premier opérateur
+            </button>
+          </Can>
         </div>
       ) : typeFilter ? (
         <div className="space-y-2">

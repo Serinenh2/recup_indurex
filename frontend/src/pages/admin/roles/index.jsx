@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Shield, Users, Check, X, ChevronDown, ChevronUp, Save, Loader2 } from 'lucide-react'
 import api from '../../../api'
 import clsx from 'clsx'
+import { Can } from '../../../components/guards'
 
 const MODULE_LABELS = {
   accounts: 'Utilisateurs',
@@ -132,13 +133,15 @@ export default function AdminRolesPage() {
                 <h2 className="font-semibold text-slate-900 dark:text-white">
                   Permissions — {selectedRole.name}
                 </h2>
-                <button
-                  onClick={savePermissions}
-                  disabled={saving}
-                  className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 disabled:opacity-50">
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  Sauvegarder
-                </button>
+                <Can do="accounts.change_group">
+                  <button
+                    onClick={savePermissions}
+                    disabled={saving}
+                    className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 disabled:opacity-50">
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Sauvegarder
+                  </button>
+                </Can>
               </div>
 
               <div className="space-y-3">

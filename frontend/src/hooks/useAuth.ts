@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useMemo } from '@tanstack/react-query';
 import { useAuthStore } from '../store/authStore';
 import apiClient from '../services/api';
 import type { User, JWTResponse } from '../types';
@@ -33,11 +33,41 @@ export const updateCurrentUser = async (data: Partial<User>): Promise<User> => {
 
 // ── Hooks ─────────────────────────────────────────────────────────────────────
 export const useCurrentUser = () => {
-  return useQuery({
+  const queryResult = useQuery({
     queryKey: authKeys.me,
     queryFn: fetchCurrentUser,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
+
+  const storeLoading = useAuthStore((s) => s.isLoading);
+  const user = queryResult.data;
+  const isLoading = queryResult.isLoading || storeLoading;
+  const isError = queryResult.isError;
+  const isAuthenticated = !!user && !isError;
+
+  return useMemo(() => ({
+    // React Query properties (for components that use .data / .isLoading)
+    data: user,
+    isLoading,
+    isError,
+    isFetching: queryResult.isFetching,
+    // Derived properties (for guard components and legacy code)
+    user,
+    loading: isLoading,
+    isAuthenticated,
+    isSuperuser: user?.is_superuser || false,
+    role: user?.role || '',
+    permissions: user?.permissions || [],
+    id: user?.id ?? null,
+    username: user?.username ?? '',
+    fullName: user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : '',
+    email: user?.email ?? '',
+    roleDisplay: user?.role_display ?? '',
+    isStaff: user?.is_staff || false,
+    groups: user?.groups || [],
+    wilaya: user?.wilaya ?? '',
+    phone: user?.phone ?? '',
+  }), [user, isLoading, isError, queryResult.isFetching]);
 };
 
 export const useLogin = () => {
@@ -67,3 +97,6 @@ export const useUpdateProfile = () => {
     },
   });
 };
+
+// ── Permission / Role Guards ───────────────────────────────────────────────────
+export { useCan, usePermissions, useRole } from './usePermissions';

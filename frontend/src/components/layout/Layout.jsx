@@ -1,48 +1,29 @@
 import { useState } from 'react'
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
-  LayoutDashboard, Package, FileText,
-  BarChart3, LogOut, ChevronLeft, ChevronRight,
-  Menu, Moon, Sun, Leaf, Shield, BookOpen, X, User,
-  Bell, GraduationCap, Building2, FolderOpen, Users, Key
+  LogOut, ChevronLeft, ChevronRight,
+  Menu, Moon, Sun, Leaf, X, User
 } from 'lucide-react'
 import { useAuthStore } from '../../store'
+import { useNavigation } from '../../hooks/useNavigation'
 import clsx from 'clsx'
 
-const NAV_BASE = [
-  { to: '/dashboard',      icon: LayoutDashboard, label: 'Tableau de bord',     permission: null },
-  { to: '/operateurs',     icon: Building2,        label: 'Opérateurs',          permission: 'operateurs.view_operateur' },
-  { to: '/tracabilite',    icon: Package,          label: 'Traçabilité',         permission: 'traceability.view_traceability' },
-  { to: '/documents',      icon: FileText,         label: 'Documents',           permission: 'archive.view_document' },
-  { to: '/stats',          icon: BarChart3,        label: 'Statistiques',        permission: null },
-  { to: '/nomenclature',   icon: BookOpen,         label: 'Nomenclature',        permission: null },
-  { to: '/glossaire',      icon: GraduationCap,    label: 'Glossaire',           permission: null },
-  { to: '/archive',        icon: FolderOpen,       label: 'Archive',             permission: 'archive.view_document' },
-  { to: '/alertes',        icon: Bell,             label: 'Alertes',             permission: null },
-]
-
-function getNav(user) {
-  const nav = [...NAV_BASE]
-  if (user?.role === 'SUPERADMIN' || user?.role === 'ADMIN' || user?.is_superuser) {
-    nav.push({ to: '/users', icon: Users, label: 'Gestion Utilisateurs', permission: null })
-    nav.push({ to: '/admin/roles', icon: Shield, label: 'Gestion Rôles', permission: null })
-    nav.push({ to: '/admin/permissions', icon: Key, label: 'Gestion Permissions', permission: null })
-  }
-  return nav
+const ROLE_HIERARCHY = {
+  SUPERADMIN: 100, ADMIN: 80,
+  RESPONSABLE_COLLECTE: 60, AGENT_COLLECTE: 40,
+  RESPONSABLE_DECHARGE: 40, OBSERVATEUR: 10,
 }
 
 function Sidebar({ collapsed, onToggle, mobileOpen, onClose }) {
-  const { user, logout, hasPermission } = useAuthStore()
-  const navigate  = useNavigate()
-  const location  = useLocation()
-  const initials  = `${user?.first_name?.[0] || ''}${user?.last_name?.[0] || ''}`.toUpperCase() || 'U'
-  const allPerms  = user?.permissions || []
+  const user = useAuthStore(s => s.user)
+  const logout = useAuthStore(s => s.logout)
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { sections, sectionLabels, hasAdminSection } = useNavigation()
+  const initials = `${user?.first_name?.[0] || ''}${user?.last_name?.[0] || ''}`.toUpperCase() || 'U'
 
-  const filteredNav = getNav(user).filter(item => {
-    if (!item.permission) return true
-    if (user?.is_superuser) return true
-    return allPerms.includes(item.permission)
-  })
+  const mainItems = sections.main || []
+  const adminItems = sections.admin || []
 
   return (
     <>
@@ -103,21 +84,27 @@ function Sidebar({ collapsed, onToggle, mobileOpen, onClose }) {
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-          {filteredNav.map(item => {
-            const active = location.pathname === item.to ||
-              (item.to !== '/dashboard' && location.pathname.startsWith(item.to))
-            return (
-              <NavLink key={item.to} to={item.to} onClick={onClose}
-                className={clsx(
-                  'nav-item',
-                  active && 'nav-item-active',
-                  collapsed && 'justify-center px-0'
-                )}>
-                <item.icon className={clsx('flex-shrink-0', collapsed ? 'w-5 h-5' : 'w-4 h-4')} />
-                {!collapsed && <span className="truncate">{item.label}</span>}
-              </NavLink>
-            )
-          })}
+          {/* Main items */}
+          {mainItems.map(item => (
+            <NavItem key={item.id} item={item} collapsed={collapsed} location={location} onClose={onClose} />
+          ))}
+
+          {/* Admin section */}
+          {hasAdminSection && adminItems.length > 0 && (
+            <>
+              {!collapsed && (
+                <div className="pt-4 pb-1 px-3">
+                  <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-slate-400">
+                    {sectionLabels.admin?.label || 'Administration'}
+                  </span>
+                </div>
+              )}
+              {collapsed && <div className="pt-3 pb-1"><div className="border-t border-[#E2E8F0] dark:border-[#2B3D1E] mx-2" /></div>}
+              {adminItems.map(item => (
+                <NavItem key={item.id} item={item} collapsed={collapsed} location={location} onClose={onClose} />
+              ))}
+            </>
+          )}
         </nav>
 
         {/* Bottom — Profile + Logout */}
@@ -143,6 +130,37 @@ function Sidebar({ collapsed, onToggle, mobileOpen, onClose }) {
         </div>
       </aside>
     </>
+  )
+}
+
+function NavItem({ item, collapsed, location, onClose }) {
+  const active = location.pathname === item.to ||
+    (item.to !== '/dashboard' && location.pathname.startsWith(item.to))
+
+  return (
+    <NavLink key={item.id} to={item.to} onClick={onClose}
+      className={clsx(
+        'nav-item',
+        active && 'nav-item-active',
+        collapsed && 'justify-center px-0'
+      )}>
+      <item.icon className={clsx('flex-shrink-0', collapsed ? 'w-5 h-5' : 'w-4 h-4')} />
+      {!collapsed && (
+        <span className="truncate flex-1">{item.label}</span>
+      )}
+      {!collapsed && item.badge && (
+        <span className={clsx(
+          'ml-auto text-[0.6rem] font-bold px-1.5 py-0.5 rounded-full',
+          item.badge.color === 'red' && 'bg-red-100 text-red-600',
+          item.badge.color === 'blue' && 'bg-primary-100 text-primary-600',
+          item.badge.color === 'green' && 'bg-emerald-100 text-emerald-600',
+          item.badge.color === 'amber' && 'bg-amber-100 text-amber-600',
+          !item.badge.color && 'bg-slate-100 text-slate-600'
+        )}>
+          {item.badge.count}
+        </span>
+      )}
+    </NavLink>
   )
 }
 

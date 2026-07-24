@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store'
+import { ProtectedRoute } from './components/guards'
 
 import Layout   from './components/layout/Layout'
 import LoginPage from './pages/auth/LoginPage'
@@ -19,36 +20,13 @@ import ProfilPage       from './pages/profil/ProfilPage'
 import DocumentsPage from './pages/documents/index'
 import TracabilitePage from './pages/tracabilite/index'
 
-function PrivateRoute({ children }) {
-  const user    = useAuthStore(s => s.user)
-  const loading = useAuthStore(s => s.loading)
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-12 h-12 border-3 border-primary-500 border-t-transparent rounded-full animate-spin" />
-        <p className="text-slate-500 text-sm">Chargement...</p>
-      </div>
-    </div>
-  )
-  return user ? children : <Navigate to="/login" replace />
-}
-
-function AdminRoute({ children }) {
-  const user = useAuthStore(s => s.user)
-  if (user && !user.is_superuser && user.role !== 'SUPERADMIN' && user.role !== 'ADMIN') {
-    return <Navigate to="/dashboard" replace />
-  }
-  return children
-}
-
-function RequirePermission({ permission, children }) {
-  const user          = useAuthStore(s => s.user)
-  const hasPermission = useAuthStore(s => s.hasPermission)
-  if (user && !user.is_superuser && !hasPermission(permission)) {
-    return <Navigate to="/dashboard" replace />
-  }
-  return children
-}
+import AdministrationLayout from './pages/administration/Layout'
+import AdministrationUsersPage from './pages/administration/users/index'
+import AdministrationRolesPage from './pages/administration/roles/index'
+import AdministrationPermissionsPage from './pages/administration/permissions/index'
+import AdministrationAuditLogsPage from './pages/administration/audit-logs/index'
+import AdministrationOrganizationPage from './pages/administration/organization/index'
+import AdministrationSettingsPage from './pages/administration/settings/index'
 
 export default function App() {
   const loadUser = useAuthStore(s => s.loadUser)
@@ -57,22 +35,100 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
+
+      <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="dashboard"           element={<DashboardPage />} />
-        <Route path="operateurs"          element={<OperateursPage />} />
-        <Route path="nomenclature"        element={<NomenclaturePage />} />
-        <Route path="glossaire"           element={<GlossairePage />} />
-        <Route path="alertes"             element={<AlertesPage />} />
-        <Route path="inspections"         element={<InspectionsPage />} />
-        <Route path="stats"               element={<StatsPage />} />
-        <Route path="archive"             element={<ArchivePage />} />
-        <Route path="documents"           element={<DocumentsPage />} />
-        <Route path="admin/roles"         element={<AdminRoute><AdminRolesPage /></AdminRoute>} />
-        <Route path="admin/permissions"   element={<AdminRoute><AdminPermissionsPage /></AdminRoute>} />
-        <Route path="users"               element={<AdminRoute><UsersPage /></AdminRoute>} />
-        <Route path="profil"              element={<ProfilPage />} />
-        <Route path="tracabilite"         element={<RequirePermission permission="traceability.view_traceability"><TracabilitePage /></RequirePermission>} />
+
+        <Route path="dashboard" element={
+          <ProtectedRoute><DashboardPage /></ProtectedRoute>
+        } />
+
+        <Route path="operateurs" element={
+          <ProtectedRoute permission="operateurs.view_operateur"><OperateursPage /></ProtectedRoute>
+        } />
+
+        <Route path="tracabilite" element={
+          <ProtectedRoute permission="traceability.view_traceability"><TracabilitePage /></ProtectedRoute>
+        } />
+
+        <Route path="documents" element={
+          <ProtectedRoute permission="archive.view_document"><DocumentsPage /></ProtectedRoute>
+        } />
+
+        <Route path="stats" element={
+          <ProtectedRoute><StatsPage /></ProtectedRoute>
+        } />
+
+        <Route path="nomenclature" element={
+          <ProtectedRoute><NomenclaturePage /></ProtectedRoute>
+        } />
+
+        <Route path="glossaire" element={
+          <ProtectedRoute><GlossairePage /></ProtectedRoute>
+        } />
+
+        <Route path="archive" element={
+          <ProtectedRoute permission="archive.view_document"><ArchivePage /></ProtectedRoute>
+        } />
+
+        <Route path="alertes" element={
+          <ProtectedRoute><AlertesPage /></ProtectedRoute>
+        } />
+
+        <Route path="inspections" element={
+          <ProtectedRoute><InspectionsPage /></ProtectedRoute>
+        } />
+
+        {/* Admin routes — legacy */}
+        <Route path="admin/roles" element={
+          <ProtectedRoute role="SUPERADMIN"><AdminRolesPage /></ProtectedRoute>
+        } />
+
+        <Route path="admin/permissions" element={
+          <ProtectedRoute role="SUPERADMIN"><AdminPermissionsPage /></ProtectedRoute>
+        } />
+
+        <Route path="users" element={
+          <ProtectedRoute role="SUPERADMIN"><UsersPage /></ProtectedRoute>
+        } />
+
+        {/* Administration section */}
+        <Route path="administration" element={
+          <ProtectedRoute role="SUPERADMIN"><AdministrationLayout /></ProtectedRoute>
+        }>
+          <Route index element={<Navigate to="/administration/users" replace />} />
+
+          <Route path="users" element={
+            <ProtectedRoute role="SUPERADMIN"><AdministrationUsersPage /></ProtectedRoute>
+          } />
+
+          <Route path="roles" element={
+            <ProtectedRoute role="SUPERADMIN"><AdministrationRolesPage /></ProtectedRoute>
+          } />
+
+          <Route path="permissions" element={
+            <ProtectedRoute role="SUPERADMIN"><AdministrationPermissionsPage /></ProtectedRoute>
+          } />
+
+          <Route path="audit-logs" element={
+            <ProtectedRoute role="SUPERADMIN"><AdministrationAuditLogsPage /></ProtectedRoute>
+          } />
+
+          <Route path="organization" element={
+            <ProtectedRoute role="SUPERADMIN"><AdministrationOrganizationPage /></ProtectedRoute>
+          } />
+
+          <Route path="settings" element={
+            <ProtectedRoute role="SUPERADMIN"><AdministrationSettingsPage /></ProtectedRoute>
+          } />
+        </Route>
+
+        {/* Profile */}
+        <Route path="profil" element={
+          <ProtectedRoute><ProfilPage /></ProtectedRoute>
+        } />
+
+        {/* Catch-all */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
     </Routes>

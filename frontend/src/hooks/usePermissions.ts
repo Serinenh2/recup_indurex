@@ -58,3 +58,51 @@ export function useCanManagePermissions(): boolean {
     'auth.view_permission',
   ]);
 }
+
+const ROLE_HIERARCHY: Record<string, number> = {
+  SUPERADMIN: 100,
+  ADMIN: 80,
+  RESPONSABLE_COLLECTE: 60,
+  AGENT_COLLECTE: 40,
+  RESPONSABLE_DECHARGE: 40,
+  OBSERVATEUR: 10,
+};
+
+export function useCan() {
+  const user = useAuthStore((s) => s.user);
+  const perms = user?.permissions || [];
+  const isSuperuser = user?.is_superuser || false;
+
+  return {
+    can: (permission: string) => isSuperuser || perms.includes(permission),
+    cannot: (permission: string) => !(isSuperuser || perms.includes(permission)),
+  };
+}
+
+export function usePermissions() {
+  const user = useAuthStore((s) => s.user);
+  const perms = user?.permissions || [];
+  const isSuperuser = user?.is_superuser || false;
+
+  return {
+    hasPermission: (p: string) => isSuperuser || perms.includes(p),
+    hasAnyPermission: (ps: string[]) => isSuperuser || ps.some((p) => perms.includes(p)),
+    hasAllPermissions: (ps: string[]) => isSuperuser || ps.every((p) => perms.includes(p)),
+  };
+}
+
+export function useRole() {
+  const user = useAuthStore((s) => s.user);
+  const role = user?.role || '';
+  const isSuperuser = user?.is_superuser || false;
+
+  return {
+    hasRole: (r: string) => isSuperuser || role === r,
+    hasRoleOrAbove: (r: string) => {
+      if (isSuperuser) return true;
+      const currentLevel = ROLE_HIERARCHY[role] || 0;
+      const requiredLevel = ROLE_HIERARCHY[r] || 0;
+      return currentLevel >= requiredLevel;
+    },
+  };
+}

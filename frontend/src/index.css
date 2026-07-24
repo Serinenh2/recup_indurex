@@ -34,5 +34,42 @@ body { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; background: #F8F
   .nav-item       { @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-[#F1F5F9] dark:hover:bg-[#2B3D1E] transition-all cursor-pointer; }
   .nav-item-active{ @apply bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300; }
 }
-::-webkit-scrollbar { width: 5px; }
+
+@keyframes slide-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+.animate-slide-in { animation: slide-in 0.25s ease-out; }
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes zoom-in-95 {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-in { animation-fill-mode: both; }
+.fade-in { animation-name: fade-in; }
+.slide-in-from-bottom-2 { animation-name: slide-up; }
+.zoom-in-95 { animation-name: zoom-in-95; }
+.duration-200 { animation-duration: 200ms; }
+.duration-300 { animation-duration: 300ms; }
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
+.scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 3px; }
+.dark ::-webkit-scrollbar-thumb { background: #2B3D1E; }

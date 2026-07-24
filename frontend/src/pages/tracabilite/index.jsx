@@ -12,6 +12,7 @@ import { useAuthStore } from '../../store'
 import DateInput from '../../components/common/DateInput'
 import { formatDateFR } from '../../utils/formatDate'
 import toast from 'react-hot-toast'
+import { Can, useCan } from '../../components/guards'
 
 const opAPI = {
   getAll:  (p)    => api.get('/traceability/', { params: p }),
@@ -875,9 +876,11 @@ function TracabiliteForm({ operation, lists, currentUser, onSave, onClose }) {
           </div>
           <div className="flex gap-3 pt-2 border-t border-[#E2E8F0]">
             <button type="button" onClick={()=>setEtape(3)} className="btn-secondary">Retour</button>
-            <button type="submit" disabled={saving||allAlertes.length>0} className="btn-primary">
-              <Save size={15}/> {saving?'Enregistrement...':isEdit?'Mettre à jour':dechets.length>1?`Créer ${dechets.length} dossiers de traçabilité`:'Créer le dossier de traçabilité'}
-            </button>
+            <Can do={isEdit ? 'traceability.change_trace' : 'traceability.add_trace'}>
+              <button type="submit" disabled={saving||allAlertes.length>0} className="btn-primary">
+                <Save size={15}/> {saving?'Enregistrement...':isEdit?'Mettre à jour':dechets.length>1?`Créer ${dechets.length} dossiers de traçabilité`:'Créer le dossier de traçabilité'}
+              </button>
+            </Can>
             {allAlertes.length>0&&<span className="text-xs text-red-600 self-center font-semibold flex items-center gap-1"><AlertTriangle size={11}/>Corrigez les alertes</span>}
           </div>
         </div>
@@ -930,8 +933,12 @@ function OperationCard({ op, onEdit, onDelete, onView }) {
         </div>
         <div className="flex gap-1 flex-shrink-0" onClick={e=>e.stopPropagation()}>
           <button onClick={()=>onView(op)} className="btn-ghost p-2 text-slate-400 hover:text-primary-600"><Eye size={14}/></button>
-          <button onClick={()=>onEdit(op)} className="btn-ghost p-2 text-slate-400 hover:text-primary-600"><Edit size={14}/></button>
-          <button onClick={()=>onDelete(op.id)} className="btn-ghost p-2 text-slate-400 hover:text-red-600"><Trash2 size={14}/></button>
+          <Can do="traceability.change_trace">
+            <button onClick={()=>onEdit(op)} className="btn-ghost p-2 text-slate-400 hover:text-primary-600"><Edit size={14}/></button>
+          </Can>
+          <Can do="traceability.delete_trace">
+            <button onClick={()=>onDelete(op.id)} className="btn-ghost p-2 text-slate-400 hover:text-red-600"><Trash2 size={14}/></button>
+          </Can>
         </div>
       </div>
     </div>
@@ -997,7 +1004,9 @@ export default function TracabilitePage() {
             <p className="text-primary-600 text-sm font-semibold mt-0.5 flex items-center gap-1"><Shield size={13}/>{user.recuperateur_nom}</p>
           )}
         </div>
-        <button onClick={()=>{setEditing(null);setShowForm(true)}} className="btn-primary"><Plus size={16}/>Nouveau dossier</button>
+        <Can do="traceability.add_trace">
+          <button onClick={()=>{setEditing(null);setShowForm(true)}} className="btn-primary"><Plus size={16}/>Nouveau dossier</button>
+        </Can>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -1032,7 +1041,9 @@ export default function TracabilitePage() {
           <Package size={40} className="mx-auto mb-3 text-slate-200"/>
           <p className="font-semibold text-slate-400 text-lg">Aucun dossier de traçabilité</p>
           <p className="text-sm text-slate-300 mt-1 mb-5">Créez votre premier dossier de suivi de déchet</p>
-          <button onClick={()=>{setEditing(null);setShowForm(true)}} className="btn-primary"><Plus size={15}/>Créer un dossier</button>
+          <Can do="traceability.add_trace">
+            <button onClick={()=>{setEditing(null);setShowForm(true)}} className="btn-primary"><Plus size={15}/>Créer un dossier</button>
+          </Can>
         </div>
       ):(
         <div className="space-y-2">
@@ -1055,7 +1066,9 @@ export default function TracabilitePage() {
                 <p className="text-sm text-slate-500 mt-0.5">{viewing.designation_dechet?.slice(0,60)}</p>
               </div>
               <div className="flex gap-2">
-                <button onClick={()=>{handleEdit(viewing);setViewing(null)}} className="btn-secondary btn-sm"><Edit size={13}/></button>
+                <Can do="traceability.change_trace">
+                  <button onClick={()=>{handleEdit(viewing);setViewing(null)}} className="btn-secondary btn-sm"><Edit size={13}/></button>
+                </Can>
                 <button onClick={()=>setViewing(null)} className="btn-ghost p-2"><X size={16}/></button>
               </div>
             </div>

@@ -1,11 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../services/api';
 import type { AxiosError } from 'axios';
 import type { User } from '../../types';
+import { authKeys } from '../../hooks/useAuth';
 
-export const authKeys = {
-  me: ['auth', 'me'] as const,
-};
+export { authKeys };
 
 export const useLogin = () => {
   const queryClient = useQueryClient();
@@ -54,34 +53,5 @@ export const useLogout = () => {
   });
 };
 
-export const useCurrentUser = () => {
-  return useQuery({
-    queryKey: authKeys.me,
-    queryFn: async (): Promise<User> => {
-      const res = await apiClient.get<User>('/accounts/me/');
-      return res.data;
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
-    retry: (failureCount, error) => {
-      // Don't retry on 401/403
-      const status = (error as AxiosError)?.response?.status;
-      if (status === 401 || status === 403) return false;
-      return failureCount < 2;
-    },
-  });
-};
-
-export const useUpdateProfile = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (data: Partial<User>): Promise<User> => {
-      const res = await apiClient.patch<User>('/accounts/me/', data);
-      return res.data;
-    },
-    onSuccess: (data) => {
-      queryClient.setQueryData(authKeys.me, data);
-    },
-  });
-};
+export { useCurrentUser } from '../../hooks/useAuth';
+export { useUpdateProfile } from '../../hooks/useAuth';

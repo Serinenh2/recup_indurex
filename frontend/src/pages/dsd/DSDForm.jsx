@@ -5,6 +5,7 @@ import api from '../../api'
 import { useAuthStore } from '../../store'
 import DateInput from '../../components/common/DateInput'
 import toast from 'react-hot-toast'
+import { Can } from '../../components/guards'
 
 // Defined once at module scope (not inside the form component) so their identity
 // stays stable across re-renders — otherwise React remounts the wrapped <input>
@@ -238,12 +239,14 @@ export default function DSDForm({ onClose, prefill = {} }) {
 
         {/* Submit */}
         <div className="flex gap-3 pt-3 border-t border-[#E2E8F0] sticky bottom-0 bg-white dark:bg-[#16240D] py-3">
-          <button type="submit" disabled={generating || previewing} className="btn-primary">
-            {generating
-              ? <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>Génération...</span>
-              : <span className="flex items-center gap-2"><Download size={15}/>Télécharger le PDF</span>
-            }
-          </button>
+          <Can do="declarations.add_declaration">
+            <button type="submit" disabled={generating || previewing} className="btn-primary">
+              {generating
+                ? <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>Génération...</span>
+                : <span className="flex items-center gap-2"><Download size={15}/>Télécharger le PDF</span>
+              }
+            </button>
+          </Can>
           <button type="button" disabled={generating || previewing}
             onClick={handleSubmit(onPreview)}
             className="btn-secondary flex items-center gap-2">

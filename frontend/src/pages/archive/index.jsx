@@ -9,6 +9,7 @@ import {
 import api from '../../api'
 import { useAuthStore } from '../../store'
 import toast from 'react-hot-toast'
+import { Can, useCan } from '../../components/guards'
 
 // ── API ───────────────────────────────────────────────────────────────────────
 const archiveAPI = {
@@ -213,9 +214,11 @@ function DocumentForm({ document, onSave, onClose }) {
       </div>
 
       <div className="flex gap-3 pt-2 border-t border-[#E2E8F0]">
-        <button type="submit" disabled={saving} className="btn-primary">
-          <Save size={15} /> {saving ? 'Import en cours...' : isEdit ? 'Mettre à jour' : 'Importer le document'}
-        </button>
+        <Can do={isEdit ? 'archive.change_document' : 'archive.add_document'}>
+          <button type="submit" disabled={saving} className="btn-primary">
+            <Save size={15} /> {saving ? 'Import en cours...' : isEdit ? 'Mettre à jour' : 'Importer le document'}
+          </button>
+        </Can>
         <button type="button" onClick={onClose} className="btn-secondary">Annuler</button>
       </div>
     </form>
@@ -259,14 +262,18 @@ function DocumentCard({ doc, onEdit, onDelete, onPreview }) {
                 className="btn-ghost p-2 text-slate-400 hover:text-emerald-600" title="Télécharger">
                 <Download size={14} />
               </a>
-              <button onClick={() => onEdit(doc)}
-                className="btn-ghost p-2 text-slate-400 hover:text-primary-600" title="Modifier">
-                <Edit size={14} />
-              </button>
-              <button onClick={() => onDelete(doc.id)}
-                className="btn-ghost p-2 text-slate-400 hover:text-red-600" title="Supprimer">
-                <Trash2 size={14} />
-              </button>
+              <Can do="archive.change_document">
+                <button onClick={() => onEdit(doc)}
+                  className="btn-ghost p-2 text-slate-400 hover:text-primary-600" title="Modifier">
+                  <Edit size={14} />
+                </button>
+              </Can>
+              <Can do="archive.delete_document">
+                <button onClick={() => onDelete(doc.id)}
+                  className="btn-ghost p-2 text-slate-400 hover:text-red-600" title="Supprimer">
+                  <Trash2 size={14} />
+                </button>
+              </Can>
             </div>
           </div>
 
@@ -318,8 +325,6 @@ export default function ArchivePage() {
   const [editing,   setEditing]   = useState(null)
   const [search,    setSearch]    = useState('')
   const [catFilter, setCatFilter] = useState('')
-
-  const isAdmin = user?.is_superuser || user?.permissions?.includes('archive.add_document') || user?.permissions?.includes('archive.change_document')
 
   const load = async () => {
     setLoading(true)
@@ -388,11 +393,11 @@ export default function ArchivePage() {
             {docs.length} document(s) · {totalSize}
           </p>
         </div>
-        {isAdmin && (
+        <Can do="archive.add_document">
           <button onClick={() => { setEditing(null); setShowForm(true) }} className="btn-primary">
             <Upload size={16} /> Importer un document
           </button>
-        )}
+        </Can>
       </div>
 
       {/* Category stats */}
@@ -446,10 +451,12 @@ export default function ArchivePage() {
               ? 'Aucun document ne correspond à votre recherche'
               : 'Importez vos premiers documents'}
           </p>
-          {isAdmin && !search && !catFilter && (
-            <button onClick={() => { setEditing(null); setShowForm(true) }} className="btn-primary">
-              <Upload size={15} /> Importer un document
-            </button>
+          {!search && !catFilter && (
+            <Can do="archive.add_document">
+              <button onClick={() => { setEditing(null); setShowForm(true) }} className="btn-primary">
+                <Upload size={15} /> Importer un document
+              </button>
+            </Can>
           )}
         </div>
       ) : (
@@ -467,8 +474,8 @@ export default function ArchivePage() {
                   <DocumentCard
                     key={doc.id}
                     doc={doc}
-                    onEdit={isAdmin ? handleEdit : () => {}}
-                    onDelete={isAdmin ? handleDelete : () => {}}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
                     onPreview={() => {}}
                   />
                 ))}
@@ -480,8 +487,8 @@ export default function ArchivePage() {
               <DocumentCard
                 key={doc.id}
                 doc={doc}
-                onEdit={isAdmin ? handleEdit : () => {}}
-                onDelete={isAdmin ? handleDelete : () => {}}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
                 onPreview={() => {}}
               />
             ))}
