@@ -1,9 +1,25 @@
 from rest_framework import viewsets, filters
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from rest_framework.exceptions import ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 from apps.accounts.permissions import ModulePermission
+from apps.accounts.upload_security import validate_uploaded_file
 from .models import Document
 from .serializers import DocumentSerializer
+
+
+ALLOWED_DOC_MIMES = {
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/plain',
+    'text/csv',
+    'image/jpeg',
+    'image/png',
+}
+
 
 class DocumentViewSet(viewsets.ModelViewSet):
     module_label     = 'archive'
@@ -24,6 +40,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
         fichier = self.request.FILES.get('fichier')
         extra = {}
         if fichier:
+            fichier = validate_uploaded_file(fichier, allowed_mimes=ALLOWED_DOC_MIMES)
             extra['nom_original'] = fichier.name
             extra['taille']       = fichier.size
             extra['type_mime']    = fichier.content_type or ''
@@ -33,6 +50,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
         fichier = self.request.FILES.get('fichier')
         extra = {}
         if fichier:
+            fichier = validate_uploaded_file(fichier, allowed_mimes=ALLOWED_DOC_MIMES)
             extra['nom_original'] = fichier.name
             extra['taille']       = fichier.size
             extra['type_mime']    = fichier.content_type or ''

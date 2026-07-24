@@ -1,0 +1,53 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+
+# Node
+node_modules/
+frontend/node_modules/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+*.local
+
+# Logs
+*.log
+/logs/
+
+# Media (in production)
+/media/
+
+# Database
+*.sqlite3
+
+# Docker
+docker-compose*.yml
+Dockerfile
+.dockerignore
+
+# Project specific
+backend/db.sqlite3
+backend/staticfiles/
+frontend/dist/
