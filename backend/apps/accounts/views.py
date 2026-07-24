@@ -31,13 +31,29 @@ class RoleSerializer(serializers.ModelSerializer):
         return obj.user_set.count()
 
 
+PERMISSION_TRANSLATIONS = {
+    'Can add': 'Peut ajouter',
+    'Can change': 'Peut modifier',
+    'Can delete': 'Peut supprimer',
+    'Can view': 'Peut consulter',
+}
+
 class PermissionSerializer(serializers.ModelSerializer):
     app_label = serializers.CharField(source='content_type.app_label', read_only=True)
     model_name = serializers.CharField(source='content_type.model', read_only=True)
+    name = serializers.SerializerMethodField()
 
     class Meta:
         model = Permission
         fields = ['id', 'codename', 'name', 'app_label', 'model_name']
+
+    def get_name(self, obj):
+        """Traduit le nom de permission anglais → français."""
+        _name = obj.name
+        for en, fr in PERMISSION_TRANSLATIONS.items():
+            if _name.startswith(en):
+                return _name.replace(en, fr, 1)
+        return _name
 
 
 @api_view(['GET'])
@@ -153,21 +169,64 @@ def me(request):
     return Response(data)
 
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsSuperAdmin])
 def roles_list(request):
+    if request.method == 'POST':
+        name = request.data.get('name', '').strip()
+        if not name:
+            return Response({'error': 'Le nom du rôle est requis'}, status=400)
+        if Group.objects.filter(name=name).exists():
+            return Response({'error': 'Un rôle avec ce nom existe déjà'}, status=400)
+        group = Group.objects.create(name=name)
+        AuditLog.objects.create(
+            user=request.user, action='CREATE', model_name='Group',
+            object_id=str(group.id), details={'name': name},
+            ip_address=getattr(request, '_audit_ip', None),
+        )
+        return Response(RoleSerializer(group).data, status=201)
     groups = Group.objects.prefetch_related('permissions__content_type').all()
     return Response(RoleSerializer(groups, many=True).data)
 
 
-@api_view(['GET'])
+@api_view(['GET', 'PATCH', 'DELETE'])
 @permission_classes([IsSuperAdmin])
 def roles_detail(request, pk):
     try:
         group = Group.objects.prefetch_related('permissions__content_type').get(pk=pk)
     except Group.DoesNotExist:
         return Response({'error': 'Rôle introuvable'}, status=404)
-    return Response(RoleSerializer(group).data)
+
+    if request.method == 'GET':
+        return Response(RoleSerializer(group).data)
+
+    if request.method == 'PATCH':
+        name = request.data.get('name', '').strip()
+        if not name:
+            return Response({'error': 'Le nom du rôle est requis'}, status=400)
+        old_name = group.name
+        group.name = name
+        group.save()
+        AuditLog.objects.create(
+            user=request.user, action='UPDATE', model_name='Group',
+            object_id=str(pk), details={'old_name': old_name, 'new_name': name},
+            ip_address=getattr(request, '_audit_ip', None),
+        )
+        return Response(RoleSerializer(group).data)
+
+    if request.method == 'DELETE':
+        if group.user_set.exists():
+            return Response({'error': 'Impossible de supprimer un rôle qui a des utilisateurs assignés'}, status=400)
+        AuditLog.objects.create(
+            user=request.user, action='DELETE', model_name='Group',
+            object_id=str(pk), details={'name': group.name},
+            ip_address=getattr(request, '_audit_ip', None),
+        )
+        group.delete()
+        return Response(status=204)
+
+
+
 
 
 @api_view(['PUT'])
