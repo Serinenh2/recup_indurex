@@ -1,11 +1,18 @@
 import { useState, useEffect } from 'react';
 import { Container, Paper, TextField, Button, Typography, Box, Alert, Avatar, Grid, Divider, Chip, List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
 import { Email, Phone, LocationOn, Badge, VerifiedUser } from '@mui/icons-material';
-import { useCurrentUser, useUpdateProfile } from '../api';
-import { ProfileSkeleton } from '../../components/ui/Skeleton';
+import { useUpdateProfile } from '../api';
+import { useQuery } from '@tanstack/react-query';
+import { fetchCurrentUser, authKeys } from '../../../hooks/useAuth';
+import { ProfileSkeleton } from '../../../components/ui/Skeleton';
 
 export default function ProfilePage() {
-  const { data: user, isLoading, isError, error, refetch } = useCurrentUser();
+  const { data: user, isLoading, isError, error: queryError, refetch } = useQuery({
+    queryKey: authKeys.me,
+    queryFn: fetchCurrentUser,
+    staleTime: 5 * 60 * 1000,
+  });
+  const error = queryError as Error | null;
   const updateMutation = useUpdateProfile();
 
   const [form, setForm] = useState({

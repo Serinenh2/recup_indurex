@@ -13,6 +13,8 @@ import {
   MenuItem,
   Typography,
   Box,
+  FormControlLabel,
+  Switch,
 } from '@mui/material';
 import type { User, UserFormData, UserRole } from '../types';
 

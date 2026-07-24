@@ -1,5 +1,5 @@
-import { useQuery, useMutation, useQueryClient, useMemo } from '@tanstack/react-query';
-// @ts-expect-error - TanStack Query types vary by version
+import { useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../store/authStore';
 import apiClient from '../services/api';
 import type { User, JWTResponse } from '../types';

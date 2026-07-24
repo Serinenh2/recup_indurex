@@ -143,7 +143,7 @@ export default function AuditLogsPage() {
       field: 'timestamp',
       headerName: 'Date',
       width: 180,
-      valueFormatter: (params) => new Date(params.value as string).toLocaleString('fr-FR'),
+      valueFormatter: (value) => new Date(value as string).toLocaleString('fr-FR'),
     },
   ];
 

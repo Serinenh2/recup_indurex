@@ -19,7 +19,7 @@ import {
 } from '@mui/material';
 import { useForm, Controller } from 'react-hook-form';
 import { useAssignRole, useRoleHistory } from '../api';
-import type { User } from '../../types';
+import type { User } from '../types';
 
 interface AssignRoleDialogProps {
   open: boolean;

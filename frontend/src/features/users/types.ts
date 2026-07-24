@@ -1,7 +1,7 @@
-import type { User as GlobalUser, UserRole as GlobalUserRole } from '../../types';
-
-// Re-export global types used by this feature
-export type { GlobalUser as User, GlobalUserRole as UserRole };
+// Re-export types from global types
+import type { User as _User, UserRole as _UserRole } from '../../types';
+export type User = _User;
+export type UserRole = _UserRole;
 
 export interface UserFormData {
   username: string;

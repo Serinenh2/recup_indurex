@@ -6,6 +6,7 @@ import {
   type GridSortModel,
   type GridFilterModel,
   type GridRowParams,
+  type GridRenderCellParams,
 } from '@mui/x-data-grid';
 import {
   Box,
@@ -45,7 +46,7 @@ import {
 } from '@mui/icons-material';
 import { useUsersList, useCreateUser, useUpdateUser, useDeleteUser, useToggleUserStatus, useResetPassword, useAssignRole } from '../api';
 import type { User, UserFilters, UserFormData } from '../types';
-import { useAuthStore } from '../../store/authStore';
+import { useAuthStore } from '../../../store/authStore';
 import UserDialog from './UserDialog';
 import UserViewDialog from './UserViewDialog';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
@@ -155,7 +156,7 @@ export default function UsersPage() {
     }
   };
 
-  const handleSaveUser = async (formData: UserFormData) => {
+  const handleSaveUser = async (formData: any) => {
     try {
       if (selectedUser) {
         await updateMutation.mutateAsync({ id: selectedUser.id, data: formData });
@@ -190,11 +191,11 @@ export default function UsersPage() {
 
   const handleSearchChange = (value: string) => {
     setSearchText(value);
-    setFilters((prev) => ({ ...prev, search: value || undefined }));
+    setFilters((prev) => ({ ...prev, search: value || undefined }) as UserFilters);
   };
 
   const handleRoleFilterChange = (role: string) => {
-    setFilters((prev) => ({ ...prev, role: role || undefined }));
+    setFilters((prev) => ({ ...prev, role: role || undefined }) as UserFilters);
   };
 
   const rows = useMemo(() => data?.results || [], [data]);
@@ -251,7 +252,7 @@ export default function UsersPage() {
       width: 340,
       sortable: false,
       filterable: false,
-      renderCell: (params: GridRowParams<User>) => (
+      renderCell: (params: GridRenderCellParams<User>) => (
         <Box sx={{ display: 'flex', gap: 0.5 }}>
           <Tooltip title="Voir">
             <IconButton size="small" onClick={() => handleView(params.row)}>

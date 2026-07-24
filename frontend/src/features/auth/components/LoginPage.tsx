@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Container, Paper, TextField, Button, Typography, Box, Alert, Checkbox, FormControlLabel, InputAdornment, IconButton } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { useLogin } from '../api';
-import { useAuthStore } from '../../store/authStore';
+import { useAuthStore } from '../../../store/authStore';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');

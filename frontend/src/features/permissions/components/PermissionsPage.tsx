@@ -250,8 +250,8 @@ export default function PermissionsPage() {
             pageSizeOptions={[ITEMS_PER_PAGE]}
             initialState={{ pagination: { paginationModel: { pageSize: ITEMS_PER_PAGE, page: 0 } } }}
             checkboxSelection
-            onRowSelectionModelChange={(newSelection) => setSelectedPermissionIds(newSelection as number[])}
-            rowSelectionModel={selectedPermissionIds}
+            onRowSelectionModelChange={(newSelection: any) => setSelectedPermissionIds(Array.from(newSelection) as number[])}
+            rowSelectionModel={selectedPermissionIds as any}
             disableRowSelectionOnClick
             getRowId={(row) => row.id}
             localeText={{

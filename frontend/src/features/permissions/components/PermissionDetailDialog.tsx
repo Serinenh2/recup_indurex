@@ -1,4 +1,5 @@
 import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, Box, Typography, Chip, Divider } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
 import type { Permission } from '../types';
 
 interface PermissionDetailDialogProps {
